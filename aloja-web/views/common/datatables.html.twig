@@ -331,9 +331,11 @@
 
                     	var headTitle = $("#benchmarks thead tr:first-child th:nth-child("+index+")").text();
                      {% if selected == 'Hadoop Job Counters' %}
-                       	if(headTitle == 'JOBID')
-        					$(this).html('<a href="{{ path('counters') }}?execs[]=' + aData[0] + '&type=TASKS" target="_blank">' + aData[2] + '</a>');
-                    	else if(headTitle == '')
+                        if(headTitle == 'ID')
+                            $(this).html('<a href="{{ path('counters') }}?execs[]=' + aData[0] + '&type=TASKS" target="_blank">' + aData[0] + '</a>');
+                        else if(headTitle == 'JOBID')
+                            $(this).html('<a href="{{ path('histogram') }}?jobid=' + aData[2] + '" target="_blank">' + aData[2] + '</a>');
+                        else if(headTitle == '')
                             $(this).html('<input type="checkbox" name="execs[]" value="'+ aData[0] + '">');
                      {% elseif selected == 'Benchmark Executions' %}
                        	if(headTitle == 'Benchmark')
