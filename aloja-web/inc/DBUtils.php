@@ -20,7 +20,7 @@ class DBUtils
         $this->dbConn->setAttribute(\PDO::ATTR_EMULATE_PREPARES, false);
     }
 
-    public function get_rows($sql)
+    public function get_rows($sql, $params = array())
     {
         $md5_sql = md5($sql);
         $file_path = "{$this->container['config']['db_cache_path']}/CACHE_$md5_sql.sql";
@@ -45,7 +45,7 @@ class DBUtils
 
             try {
                 $sth = $this->dbConn->prepare($sql);
-                $sth->execute();
+                $sth->execute($params);
             } catch (Exception $e) {
                 throw new \Exception($e->getMessage(). " SQL: $sql");
             }
