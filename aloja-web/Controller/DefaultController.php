@@ -1141,4 +1141,13 @@ class DefaultController extends AbstractController
                 'type' => $type ? $type : 'CPU'
             ));
     }
+
+    public function histogramAction()
+    {
+        echo $this->container->getTwig()->render('histogram/histogram.html.twig',
+            array(
+                'highcharts_js' => HighCharts::getHeader(),
+            )
+        );
+    }
 }

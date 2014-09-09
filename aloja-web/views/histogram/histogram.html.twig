@@ -1,0 +1,79 @@
+{% extends "layout.html.twig" %}
+
+{% block stylesheet %}
+    {{ parent() }}
+{% endblock %}
+
+{% block javascript %}
+    {{ parent() }}
+    {{ highcharts_js|raw }}
+
+    <script>
+        $(document).ready(function() {
+
+            $('#chart').highcharts({
+                chart: {
+                    type: 'column'
+                },
+                title: {
+                    text: 'Histogram'
+                },
+                subtitle: {
+                    text: 'Histogram for all tasks'
+                },
+                xAxis: {
+                    type: 'category',
+                },
+                yAxis: {
+                    min: 0,
+                    title: {
+                        text: 'Metric ABC'
+                    }
+                },
+                tooltip: {
+                    headerFormat: '<span><b>{point.key}</b></span><br>',
+                    pointFormat: '<span>{point.y}</span>',
+                    footerFormat: '',
+                    shared: true,
+                    useHTML: true
+                },
+                plotOptions: {
+                    column: {
+                        groupPadding: 0,
+                        pointPadding: 0,
+                        borderWidth: 0,
+                    }
+                },
+                series: [
+                    {
+                        showInLegend: false,
+                        data: [
+                            ['Task 1', 49.9],
+                            ['Task 2', 71.5],
+                            ['Task 3', 106.4],
+                            ['Task 4', 129.2],
+                            ['Task 5', 144.0],
+                            ['Task 6', 176.0],
+                            ['Task 7', 135.6],
+                            ['Task 8', 148.5],
+                            ['Task 9', 216.4],
+                            ['Task 10', 194.1],
+                            ['Task 11', 95.6],
+                            ['Task 12', 54.4],
+                        ],
+                    },
+                ]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block navigation %}
+    {{ parent() }}
+
+    <div id="navigation" style="text-align: center;">
+    <h1>Histogram</h1>
+        <div id="chart" style="width: 800px; height: 800px; margin: 0 auto"></div>
+    </div>
+
+{% endblock %}
