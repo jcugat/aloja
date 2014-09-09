@@ -1175,13 +1175,20 @@ class DefaultController extends AbstractController
 
         $jobid = Utils::get_GET_string("jobid");
         $metric = $METRICS[Utils::get_GET_int("metric") ?: 0];
+        $group = Utils::get_GET_int("group") ?: 0;  // Group the rows in groups of this quantity
 
         $query_select = array_key_exists($metric, $METRICS_CUSTOM_QUERY) ? $METRICS_CUSTOM_QUERY[$metric] : function($table) use ($metric)  { return "$table.`$metric`"; };
         $query = "SELECT t.`TASKID`, ".$query_select('t')." FROM `JOB_tasks` t WHERE t.`JOBID` = :jobid ORDER BY t.`TASKID`;";
         $query_params = array(":jobid" => $jobid);
+
+        if ($group) {
+            $query = "SELECT MIN(t.`TASKID`) as STARTID, AVG(".$query_select('t')."), STDDEV(".$query_select('t')."), t.`TASK_TYPE`, CONVERT(SUBSTRING(t.`TASKID`, 26), UNSIGNED INT) DIV $group as MYDIV FROM `JOB_tasks` t WHERE t.`JOBID` = :jobid GROUP BY MYDIV, t.`TASK_TYPE` ORDER BY MIN(t.`TASKID`);";
+        }
+
         $rows = $db->get_rows($query, $query_params);
 
         $seriesData = '';
+        $seriesError = '';
         foreach ($rows as $row) {
             $task = array_shift($row);
             $value = array_shift($row) ?: 0;
@@ -1190,6 +1197,14 @@ class DefaultController extends AbstractController
             $task = substr($task, 23);
 
             $seriesData .= "['$task', $value],";
+
+            if ($group) {
+                $stddev = array_shift($row) ?: 0;
+                $value_low = $value - $stddev;
+                $value_high = $value + $stddev;
+
+                $seriesError .= "{low: $value_low, high: $value_high, stddev: $stddev},";
+            }
         }
 
         echo $this->container->getTwig()->render('histogram/histogram.html.twig',
@@ -1197,7 +1212,9 @@ class DefaultController extends AbstractController
                 'highcharts_js' => HighCharts::getHeader(),
                 'jobid' => $jobid,
                 'metric' => $metric,
+                'group' => $group,
                 'seriesData' => $seriesData,
+                'seriesError' => $seriesError,
                 'METRICS' => $METRICS,
             )
         );

@@ -57,6 +57,22 @@
                                 {{ seriesData | raw }}
                             ],
                         },
+                        {% if seriesError is not empty %}
+                            {
+                                name: "Error",
+                                type: 'errorbar',
+                                showInLegend: false,
+                                color: '#DF5353',
+                                stemWidth: 3,
+                                whiskerLength: 0,
+                                tooltip: {
+                                    pointFormat: '<span style="color:{series.color}">\u25CF</span> {series.name}: <b>&plusmn;{point.stddev}</b><br/>',
+                                },
+                                data: [
+                                    {{ seriesError | raw }}
+                                ],
+                            },
+                        {% endif %}
                     ]
             });
         });
@@ -77,6 +93,9 @@
                         <option value="{{ loop.index0 }}" {% if current_metric == metric %}selected="selected"{% endif %}>{{ current_metric }}</option>
                     {% endfor %}
                 </select>
+                &nbsp;&nbsp;&nbsp;
+                <strong>Group every: </strong>
+                <input type="text" name="group" value="{{ group }}" size="4">
             </form>
         </div>
         <div id="chart" style="margin: 0 auto"></div>
