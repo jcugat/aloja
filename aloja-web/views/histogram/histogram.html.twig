@@ -96,6 +96,14 @@
                 &nbsp;&nbsp;&nbsp;
                 <strong>Group every: </strong>
                 <input type="text" name="group" value="{{ group }}" size="4">
+                &nbsp;&nbsp;&nbsp;
+                <strong>Accumulated: </strong>
+                <select name="accumulated">
+                    <option value="0" {% if accumulated == 0 %}selected="selected"{% endif %}>Disabled</option>
+                    <option value="1" {% if accumulated == 1 %}selected="selected"{% endif %}>Metric</option>
+                    <option value="2" {% if accumulated == 2 %}selected="selected"{% endif %}>Metric/Task Duration</option>
+                    <option value="3" {% if accumulated == 3 %}selected="selected"{% endif %}>Metric/Accumulated Duration</option>
+                </select>
             </form>
         </div>
         <div id="chart" style="margin: 0 auto"></div>

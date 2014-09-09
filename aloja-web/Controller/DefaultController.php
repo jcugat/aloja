@@ -1176,6 +1176,7 @@ class DefaultController extends AbstractController
         $jobid = Utils::get_GET_string("jobid");
         $metric = $METRICS[Utils::get_GET_int("metric") ?: 0];
         $group = Utils::get_GET_int("group") ?: 0;  // Group the rows in groups of this quantity
+        $accumulated = Utils::get_GET_int("accumulated") ?: 0;
 
         $query_select = array_key_exists($metric, $METRICS_CUSTOM_QUERY) ? $METRICS_CUSTOM_QUERY[$metric] : function($table) use ($metric)  { return "$table.`$metric`"; };
         $query = "SELECT t.`TASKID`, ".$query_select('t')." FROM `JOB_tasks` t WHERE t.`JOBID` = :jobid ORDER BY t.`TASKID`;";
@@ -1185,16 +1186,40 @@ class DefaultController extends AbstractController
             $query = "SELECT MIN(t.`TASKID`) as STARTID, AVG(".$query_select('t')."), STDDEV(".$query_select('t')."), t.`TASK_TYPE`, CONVERT(SUBSTRING(t.`TASKID`, 26), UNSIGNED INT) DIV $group as MYDIV FROM `JOB_tasks` t WHERE t.`JOBID` = :jobid GROUP BY MYDIV, t.`TASK_TYPE` ORDER BY MIN(t.`TASKID`);";
         }
 
+        if ($accumulated) {
+            // Accumulated view doesn't support group
+            $group = 0;
+
+            $query = "SELECT t.`TASKID`, SUM(".$query_select('t2').") ";
+
+            if ($accumulated == 2) {
+                $query .= " / ".$METRICS_CUSTOM_QUERY['Duration']('t');
+            }
+
+            if ($accumulated == 3) {
+                $query .= ", ".$METRICS_CUSTOM_QUERY['Duration']('t');
+            }
+
+            $query .= " FROM `JOB_tasks` t JOIN `JOB_tasks` t2 ON (t.`TASKID` >= t2.`TASKID` AND t2.`JOBID` = :jobid_repeated) WHERE t.`JOBID` = :jobid GROUP BY t.`TASKID`;";
+            $query_params[":jobid_repeated"] = $jobid;
+        }
+
         $rows = $db->get_rows($query, $query_params);
 
         $seriesData = '';
         $seriesError = '';
+        $accumulated_duration = 0;
         foreach ($rows as $row) {
             $task = array_shift($row);
             $value = array_shift($row) ?: 0;
 
             // Show only task id (not the whole string)
             $task = substr($task, 23);
+
+            if ($accumulated == 3) {
+                $accumulated_duration += array_shift($row) ?: 0;
+                $value = $value / $accumulated_duration;
+            }
 
             $seriesData .= "['$task', $value],";
 
@@ -1213,6 +1238,7 @@ class DefaultController extends AbstractController
                 'jobid' => $jobid,
                 'metric' => $metric,
                 'group' => $group,
+                'accumulated' => $accumulated,
                 'seriesData' => $seriesData,
                 'seriesError' => $seriesError,
                 'METRICS' => $METRICS,
