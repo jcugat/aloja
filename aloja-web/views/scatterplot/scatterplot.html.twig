@@ -1,0 +1,89 @@
+{% extends "layout.html.twig" %}
+
+{% block stylesheet %}
+    {{ parent() }}
+{% endblock %}
+
+{% block javascript %}
+    {{ parent() }}
+    {{ highcharts_js|raw }}
+
+    <script>
+        $(document).ready(function() {
+
+            $('select').change(function() {
+                $(this).parents('form').submit();
+            });
+
+            $('#chart').highcharts({
+                chart: {
+                    type: 'scatter',
+                    zoomType: 'xy',
+                },
+                title: {
+                    text: 'Scatterplot'
+                },
+                subtitle: {
+                    text: '{{ jobid }}'
+                },
+                xAxis: {
+                    title: {
+                        text: '{{ metricX }}'
+                    },
+                },
+                yAxis: {
+                    title: {
+                        text: '{{ metricY }}'
+                    },
+                },
+                tooltip: {
+                    shared: true,
+                    useHTML: true
+                },
+                plotOptions: {
+                },
+                series: 
+                    [
+                        {
+                            showInLegend: false,
+                            tooltip: {
+                                headerFormat: '',
+                                pointFormat: '<span style="font-size: 10px">{point.task}</span><br/><span style="color:{series.color}">\u25CF</span> {{ metricX }}: <b>{point.x}</b><br/><span style="color:{series.color}">\u25CF</span> {{ metricY }}: <b>{point.y}</b><br/>',
+                            },
+                            data: [
+                                {{ seriesData | raw }}
+                            ],
+                        },
+                    ]
+            });
+        });
+    </script>
+{% endblock %}
+
+{% block navigation %}
+    {{ parent() }}
+
+    <div id="navigation" style="text-align: center;">
+        <h1>Histogram</h1>
+        <div id="filters" style="text-align: left;">
+            <form method="GET">
+                <input type="hidden" name="jobid" value="{{ jobid }}">
+                <strong>Metric X: </strong>
+                <select name="metricX">
+                    {% for current_metric in METRICS %}
+                        <option value="{{ loop.index0 }}" {% if current_metric == metricX %}selected="selected"{% endif %}>{{ current_metric }}</option>
+                    {% endfor %}
+                </select>
+                &nbsp;&nbsp;&nbsp;
+                <strong>Metric Y: </strong>
+                <select name="metricY">
+                    {% for current_metric in METRICS %}
+                        <option value="{{ loop.index0 }}" {% if current_metric == metricY %}selected="selected"{% endif %}>{{ current_metric }}</option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+        <div id="chart" style="margin: 0 auto"></div>
+    </div>
+
+{% endblock %}

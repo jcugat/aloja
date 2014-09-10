@@ -46,3 +46,7 @@ metrics:
 metricsdata:
     pattern: "/metricsdata"
     controller: "alojaweb\\Controller\\RestController::metricsDataAction"
+
+scatterplot:
+    pattern: "/scatterplot"
+    controller: "alojaweb\\Controller\\DefaultController::scatterplotAction"

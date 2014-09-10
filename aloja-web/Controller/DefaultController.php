@@ -1141,4 +1141,70 @@ class DefaultController extends AbstractController
                 'type' => $type ? $type : 'CPU'
             ));
     }
+
+    public function scatterplotAction()
+    {
+        $METRICS = [
+            'Duration',
+            'Bytes Read',
+            'Bytes Written',
+            'FILE_BYTES_WRITTEN',
+            'FILE_BYTES_READ',
+            'HDFS_BYTES_WRITTEN',
+            'HDFS_BYTES_READ',
+            'Spilled Records',
+            'SPLIT_RAW_BYTES',
+            'Map input records',
+            'Map output records',
+            'Map input bytes',
+            'Map output bytes',
+            'Map output materialized bytes',
+            'Reduce input groups',
+            'Reduce input records',
+            'Reduce output records',
+            'Reduce shuffle bytes',
+            'Combine input records',
+            'Combine output records',
+        ];
+
+        $METRICS_CUSTOM_QUERY = [
+            'Duration' => function($table) { return "TIMESTAMPDIFF(SECOND, $table.`START_TIME`, $table.`FINISH_TIME`)"; },
+        ];
+
+        $db = $this->container->getDBUtils();
+
+        $jobid = Utils::get_GET_string("jobid");
+        $metricX = $METRICS[Utils::get_GET_int("metricX") !== FALSE ? Utils::get_GET_int("metricX") : 0];
+        $metricY = $METRICS[Utils::get_GET_int("metricY") !== FALSE ? Utils::get_GET_int("metricY") : 1];
+
+        $query_select1 = array_key_exists($metricX, $METRICS_CUSTOM_QUERY) ? $METRICS_CUSTOM_QUERY[$metricX] : function($table) use ($metricX) { return "$table.`$metricX`"; };
+        $query_select2 = array_key_exists($metricY, $METRICS_CUSTOM_QUERY) ? $METRICS_CUSTOM_QUERY[$metricY] : function($table) use ($metricY) { return "$table.`$metricY`"; };
+        $query = "SELECT t.`TASKID`, ".$query_select1('t')." x, ".$query_select2('t')." y FROM `JOB_tasks` t WHERE t.`JOBID` = :jobid ORDER BY t.`TASKID`;";
+        $query_params = array(":jobid" => $jobid);
+
+        $rows = $db->get_rows($query, $query_params);
+
+        $seriesData = '';
+        foreach ($rows as $row) {
+            $task = array_shift($row);
+            $valueX = array_shift($row) ?: 0;
+            $valueY = array_shift($row) ?: 0;
+
+            // Show only task id (not the whole string)
+            $task = substr($task, 23);
+
+            $seriesData .= "{x: $valueX, y: $valueY, task: '$task'},";
+        }
+
+        echo $this->container->getTwig()->render('scatterplot/scatterplot.html.twig',
+            array(
+                'highcharts_js' => HighCharts::getHeader(),
+                'jobid' => $jobid,
+                'metricX' => $metricX,
+                'metricY' => $metricY,
+                'seriesData' => $seriesData,
+                'METRICS' => $METRICS,
+            )
+        );
+    }
 }
