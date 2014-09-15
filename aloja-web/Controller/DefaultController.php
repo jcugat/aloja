@@ -5,6 +5,7 @@ namespace alojaweb\Controller;
 use alojaweb\inc\HighCharts;
 use alojaweb\inc\Utils;
 use alojaweb\inc\DBUtils;
+use alojaweb\inc\DBSCAN;
 
 class DefaultController extends AbstractController
 {
@@ -1184,6 +1185,8 @@ class DefaultController extends AbstractController
 
         $rows = $db->get_rows($query, $query_params);
 
+        $points = array();
+
         $seriesData = '';
         foreach ($rows as $row) {
             $task = array_shift($row);
@@ -1194,7 +1197,20 @@ class DefaultController extends AbstractController
             $task = substr($task, 23);
 
             $seriesData .= "{x: $valueX, y: $valueY, task: '$task'},";
+
+            if (count($points) < 5) {
+               $points[] = array($valueX, $valueY);
+            }
         }
+
+        echo "<pre>\n";
+        $e = 10000;
+        $minimumPoints = 2;
+        $dbscan = DBSCAN::ll_dbscan($points, $e, $minimumPoints);
+        echo "resultat:\n";
+        print_r($dbscan);
+        echo "</pre>\n";
+        die();
 
         echo $this->container->getTwig()->render('scatterplot/scatterplot.html.twig',
             array(
