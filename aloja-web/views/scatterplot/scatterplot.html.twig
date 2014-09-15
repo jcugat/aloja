@@ -44,16 +44,18 @@
                 },
                 series: 
                     [
+                    {% for serie in series %}
                         {
-                            showInLegend: false,
+                            showInLegend: true,
                             tooltip: {
                                 headerFormat: '',
                                 pointFormat: '<span style="font-size: 10px">{point.task}</span><br/><span style="color:{series.color}">\u25CF</span> {{ metricX }}: <b>{point.x}</b><br/><span style="color:{series.color}">\u25CF</span> {{ metricY }}: <b>{point.y}</b><br/>',
                             },
                             data: [
-                                {{ seriesData | raw }}
+                                {{ serie | raw }}
                             ],
                         },
+                    {% endfor %}
                     ]
             });
         });

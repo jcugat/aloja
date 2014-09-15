@@ -5,6 +5,11 @@ namespace alojaweb\Controller;
 use alojaweb\inc\HighCharts;
 use alojaweb\inc\Utils;
 use alojaweb\inc\DBUtils;
+use alojaweb\inc\DBSCAN;
+use alojaweb\inc\Euclidean;
+use alojaweb\inc\EuclideanPoint;
+use alojaweb\inc\TrainingSet;
+use alojaweb\inc\DataAsFeatures;
 
 class DefaultController extends AbstractController
 {
@@ -1184,7 +1189,9 @@ class DefaultController extends AbstractController
 
         $rows = $db->get_rows($query, $query_params);
 
-        $seriesData = '';
+        $points = array();
+        $tset = new TrainingSet();
+
         foreach ($rows as $row) {
             $task = array_shift($row);
             $valueX = array_shift($row) ?: 0;
@@ -1193,7 +1200,34 @@ class DefaultController extends AbstractController
             // Show only task id (not the whole string)
             $task = substr($task, 23);
 
-            $seriesData .= "{x: $valueX, y: $valueY, task: '$task'},";
+            $points[] = array('task' => $task, 'x' => $valueX, 'y' => $valueY);
+            $tset->addDocument('A', new EuclideanPoint($valueX, $valueY));
+        }
+
+        // we are stating that we consider a region to be dense
+        // if it has at least 4 points in a circle of radius 20
+        $clust = new DBSCAN(
+            2, // the minimum number of points needed
+            10000, // the radius in which we are looking for points
+            new Euclidean() // we will use the Euclidean distance
+        );
+        // do the actual clustering
+        list($clusters,$noise) = $clust->cluster($tset, new DataAsFeatures());
+
+        $series = array();
+        foreach ($clusters as $cluster) {
+
+            $data = "";
+            foreach ($cluster as $point_id) {
+                $task = $points[$point_id]['task'];
+                $valueX = $points[$point_id]['x'];
+                $valueY = $points[$point_id]['y'];
+                $data .= "{x: $valueX, y: $valueY, task: '$task'},";
+            }
+
+            if ($data) {
+                $series[] = $data;
+            }
         }
 
         echo $this->container->getTwig()->render('scatterplot/scatterplot.html.twig',
@@ -1202,7 +1236,7 @@ class DefaultController extends AbstractController
                 'jobid' => $jobid,
                 'metricX' => $metricX,
                 'metricY' => $metricY,
-                'seriesData' => $seriesData,
+                'series' => $series,
                 'METRICS' => $METRICS,
             )
         );
