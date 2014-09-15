@@ -5,6 +5,8 @@ namespace alojaweb\Controller;
 use alojaweb\inc\HighCharts;
 use alojaweb\inc\Utils;
 use alojaweb\inc\DBUtils;
+use alojaweb\inc\dbscan\DBSCAN;
+use alojaweb\inc\dbscan\Point;
 
 class DefaultController extends AbstractController
 {
@@ -1174,8 +1176,10 @@ class DefaultController extends AbstractController
         $db = $this->container->getDBUtils();
 
         $jobid = Utils::get_GET_string("jobid");
-        $metricX = $METRICS[Utils::get_GET_int("metricX") !== FALSE ? Utils::get_GET_int("metricX") : 0];
-        $metricY = $METRICS[Utils::get_GET_int("metricY") !== FALSE ? Utils::get_GET_int("metricY") : 1];
+        $metricX = $METRICS[Utils::get_GET_int("metricX") !== null ? Utils::get_GET_int("metricX") : 0];
+        $metricY = $METRICS[Utils::get_GET_int("metricY") !== null ? Utils::get_GET_int("metricY") : 1];
+        $eps = Utils::get_GET_int("eps") !== null ? Utils::get_GET_int("eps") : 4;
+        $minPoints = Utils::get_GET_int("minPoints") !== null ? Utils::get_GET_int("minPoints") : 2;
 
         $query_select1 = array_key_exists($metricX, $METRICS_CUSTOM_QUERY) ? $METRICS_CUSTOM_QUERY[$metricX] : function($table) use ($metricX) { return "$table.`$metricX`"; };
         $query_select2 = array_key_exists($metricY, $METRICS_CUSTOM_QUERY) ? $METRICS_CUSTOM_QUERY[$metricY] : function($table) use ($metricY) { return "$table.`$metricY`"; };
@@ -1184,7 +1188,7 @@ class DefaultController extends AbstractController
 
         $rows = $db->get_rows($query, $query_params);
 
-        $seriesData = '';
+        $points = array();
         foreach ($rows as $row) {
             $task = array_shift($row);
             $valueX = array_shift($row) ?: 0;
@@ -1193,7 +1197,34 @@ class DefaultController extends AbstractController
             // Show only task id (not the whole string)
             $task = substr($task, 23);
 
-            $seriesData .= "{x: $valueX, y: $valueY, task: '$task'},";
+            $points[] = new Point($valueX, $valueY, array('task' => $task));
+        }
+
+        $dbscan = new DBSCAN($eps, $minPoints);
+        list($clusters, $noise) = $dbscan->execute($points);
+
+        $seriesData = array();
+        foreach ($clusters as $cluster) {
+
+            $data = "";
+            foreach ($cluster as $point) {
+                $task = $point->info['task'];
+                $valueX = $point->x;
+                $valueY = $point->y;
+                $data .= "{x: $valueX, y: $valueY, task: '$task'},";
+            }
+
+            if ($data) {
+                $seriesData[] = $data;
+            }
+        }
+
+        $noiseData = "";
+        foreach ($noise as $point) {
+            $task = $point->info['task'];
+            $valueX = $point->x;
+            $valueY = $point->y;
+            $noiseData .= "{x: $valueX, y: $valueY, task: '$task'},";
         }
 
         echo $this->container->getTwig()->render('scatterplot/scatterplot.html.twig',
@@ -1202,7 +1233,10 @@ class DefaultController extends AbstractController
                 'jobid' => $jobid,
                 'metricX' => $metricX,
                 'metricY' => $metricY,
-                'seriesData' => $seriesData,
+                'eps' => $eps,
+                'minPoints' => $minPoints,
+                'series' => $seriesData,
+                'noise' => $noiseData,
                 'METRICS' => $METRICS,
             )
         );

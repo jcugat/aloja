@@ -44,16 +44,32 @@
                 },
                 series: 
                     [
+                    {% for serie in series %}
                         {
-                            showInLegend: false,
+                            showInLegend: true,
+                            name: "Cluster {{ loop.index }}",
                             tooltip: {
                                 headerFormat: '',
                                 pointFormat: '<span style="font-size: 10px">{point.task}</span><br/><span style="color:{series.color}">\u25CF</span> {{ metricX }}: <b>{point.x}</b><br/><span style="color:{series.color}">\u25CF</span> {{ metricY }}: <b>{point.y}</b><br/>',
                             },
                             data: [
-                                {{ seriesData | raw }}
+                                {{ serie | raw }}
                             ],
                         },
+                    {% endfor %}
+                    {% if noise is not empty %}
+                        {
+                            showInLegend: true,
+                            name: "Noise",
+                            tooltip: {
+                                headerFormat: '',
+                                pointFormat: '<span style="font-size: 10px">{point.task}</span><br/><span style="color:{series.color}">\u25CF</span> {{ metricX }}: <b>{point.x}</b><br/><span style="color:{series.color}">\u25CF</span> {{ metricY }}: <b>{point.y}</b><br/>',
+                            },
+                            data: [
+                                {{ noise | raw }}
+                            ],
+                        },
+                    {% endif %}
                     ]
             });
         });
@@ -81,6 +97,12 @@
                         <option value="{{ loop.index0 }}" {% if current_metric == metricY %}selected="selected"{% endif %}>{{ current_metric }}</option>
                     {% endfor %}
                 </select>
+                &nbsp;&nbsp;&nbsp;
+                <strong>Ems: </strong>
+                <input type="text" name="eps" value="{{ eps }}" size="4">
+                &nbsp;&nbsp;&nbsp;
+                <strong>MinPoints: </strong>
+                <input type="text" name="minPoints" value="{{ minPoints }}" size="4">
             </form>
         </div>
         <div id="chart" style="margin: 0 auto"></div>
